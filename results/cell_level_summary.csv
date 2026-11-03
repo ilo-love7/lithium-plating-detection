@@ -1,0 +1,17 @@
+﻿cell_id,source,n_cycles,M1_positive,M1_first,M1_n,M2_positive,M2_first,M2_n,M3_positive,M3_first,M3_n,M4_positive,M4_first,M4_n
+Oxford_Cell1,oxford,78,False,,0,True,1400.0,2,False,,0,False,,0
+Oxford_Cell2,oxford,73,False,,0,True,1200.0,3,False,,0,False,,0
+Oxford_Cell3,oxford,76,False,,0,True,1800.0,3,False,,0,False,,0
+Oxford_Cell4,oxford,47,False,,0,True,1100.0,1,False,,0,False,,0
+Oxford_Cell5,oxford,46,False,,0,True,1300.0,2,False,,0,False,,0
+Oxford_Cell6,oxford,46,False,,0,True,1100.0,1,False,,0,False,,0
+Oxford_Cell7,oxford,77,False,,0,True,1800.0,9,False,,0,False,,0
+Oxford_Cell8,oxford,76,False,,0,True,1300.0,9,False,,0,False,,0
+NASA_B0005,nasa,168,False,,0,False,,0,False,,0,False,,0
+NASA_B0006,nasa,168,False,,0,False,,0,False,,0,False,,0
+NASA_B0007,nasa,168,False,,0,False,,0,False,,0,False,,0
+MATR10_000013,arbin,11,False,,0,False,,0,False,,0,False,,0
+MATR10_000014,arbin,11,False,,0,False,,0,False,,0,False,,0
+MATR10_000015,arbin,11,False,,0,False,,0,False,,0,False,,0
+MATR10_000016,arbin,11,False,,0,False,,0,False,,0,False,,0
+MATR10_000017,arbin,11,False,,0,False,,0,False,,0,False,,0

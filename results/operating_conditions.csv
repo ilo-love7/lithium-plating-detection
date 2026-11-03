@@ -1,0 +1,17 @@
+﻿cell_id,source,ambient_c,median_charge_c,has_real_rest,n_rest
+Oxford_Cell1,oxford,40.0,0.53,False,0
+Oxford_Cell2,oxford,40.0,0.53,False,0
+Oxford_Cell3,oxford,40.0,0.53,False,0
+Oxford_Cell4,oxford,40.0,0.53,False,0
+Oxford_Cell5,oxford,40.0,0.53,False,0
+Oxford_Cell6,oxford,40.0,0.53,False,0
+Oxford_Cell7,oxford,40.0,0.53,False,0
+Oxford_Cell8,oxford,40.0,0.53,False,0
+NASA_B0005,nasa,24.0,0.28,False,0
+NASA_B0006,nasa,24.0,0.27,False,0
+NASA_B0007,nasa,24.0,0.29,False,0
+MATR10_000013,arbin,,0.02,True,15
+MATR10_000014,arbin,,0.02,True,16
+MATR10_000015,arbin,,0.02,True,16
+MATR10_000016,arbin,,0.02,True,15
+MATR10_000017,arbin,,0.02,True,16
