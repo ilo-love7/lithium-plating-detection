@@ -1,0 +1,157 @@
+# ============================================================
+# 析锂无损检测工具链 · 全局配置（所有判据阈值集中管理，禁止硬编码）
+# ============================================================
+
+project:
+  name: plating-detection-toolkit
+  version: 1.0.0
+  random_seed: 42
+
+# ---------- 数据路径（可被 CLI --data-root 覆盖） ----------
+paths:
+  data_root: "D:/项目/02_数据集/01_国际公开集"
+  output_dir: "results"
+  figure_dir: "results/figures"
+
+# ---------- 统一 schema ----------
+schema:
+  columns: [time, current, voltage, temperature, cycle]
+  # 电流符号约定：充电为正，放电为负，静置为 0
+  current_sign: charge_positive
+
+# ---------- 数据清洗 ----------
+cleaning:
+  voltage_min: 2.5          # V，越界剔除
+  voltage_max: 4.5          # V
+  max_time_gap_s: 3600      # 时间戳断点标注阈值（秒）
+  min_segment_points: 10    # 段内最少点数，否则丢弃
+  drift_dv_per_s: 0.01      # 静置段传感器漂移标注阈值 V/s
+
+# ---------- 静置 / 弛豫段检测 ----------
+relaxation:
+  current_threshold_c: 0.02   # 绝对值 < C/50 = 0.02C 判为无电流
+  min_duration_s: 1800        # 持续 >= 30 min 才判为有效弛豫段
+  merge_gap_s: 60             # 中间小间隙合并阈值
+  boundary_margin_s: 30       # 段首尾安全边距
+  cv_warning_current_c: 0.05  # CV 尾电流混淆排查阈值
+  cv_voltage_std: 0.005       # 区间电压 std 小于该值判为 CV 钳位并排除
+  reject_cv: true             # 是否直接排除 CV 段（false 则仅标记）
+  # 读取器已按仪器状态准确分段时，只在独立 rest 段内检测，
+  # 避免 C/100 等慢放电（电流本身<C/50）被误判
+  only_trust_rest_segment: true
+
+# ---------- 标称容量（按电芯，缺失时用数据集默认，单位 Ah） ----------
+nominal_capacity_ah:
+  oxford_default: 0.740
+  nasa_default: 2.000
+
+# ---------- M1 电压弛豫平台法（单调基线残差） ----------
+m1_relaxation:
+  sg_window: 11              # 电压 SG 平滑窗口（点数，奇数）
+  sg_polyorder: 3
+  residual_prominence: 0.000004  # 残差肩部峰 prominence（V/s），实测校准
+  min_relax_used_s: 600      # 参与分析的最短弛豫时长
+  shoulder_search_frac: 0.8  # 在前 80% 时长内搜索肩部
+  persist_n: 2               # 连续 N 个 rest 出现肩部才确认（抑制单段偶发）
+
+# ---------- M2 dQ/dV 差分电压拐点法 ----------
+m2_dqdv:
+  low_rate_threshold_c: 0.15  # 仅用 <= 0.15C 的低倍率/特征化循环
+  sg_window: 21               # 统一网格上的平滑窗口（点数）
+  sg_polyorder: 3
+  grid_voltage_min: 3.3       # 统一电压重采样网格
+  grid_voltage_max: 4.2
+  grid_n: 200
+  peak_prominence_ratio: 0.10 # 噪声门槛相对中位 dQ/dV 的比例
+  top_n_peaks: 5              # 按 prominence 取固定数量主峰，跨循环稳定
+  peak_distance_v: 0.05       # 峰最小间距（V）
+  shift_alarm_v: 0.03         # 峰位偏移报警阈值（V）
+  split_peak_distance_v: 0.04 # 峰分裂判定间距
+  max_match_gap_v: 0.04       # 顺序匹配最大间距，超距判峰丢失，避免连锁错配
+  persist_n: 2                # 连续 N 个特征化循环出现才确认（抑制随机抖动）
+
+# ---------- M3 库仑效率 + 不可逆容量变点法 ----------
+m3_coulomb:
+  rolling_window: 5           # CE 滚动均值窗口
+  ce_drop_alarm: 0.02         # CE 下降 2 个百分点报警
+  changepoint_method: pelt    # ruptures: pelt；备选 cusum
+  pelt_pen: 1.0
+  min_segment_size: 5
+  capacity_slope_alarm: 1.0   # 容量轨迹斜率变点（相对变化%）
+
+# ---------- M4 充电电压 kink 拐点法（跨循环基准形态对照） ----------
+m4_kink:
+  sg_window: 101
+  sg_polyorder: 3
+  edge_exclude_frac: 0.05     # 排除搜索窗首尾 5%（微分边界效应）
+  cc_current_percentile: 90   # 用电流 90 分位估计 CC 额定电流
+  cc_current_frac: 0.85       # |I| >= 0.85*CC额定 才属恒流段，排除 CV
+  # 段间过滤：段平均电流须 >= 主充电倍率的该比例，排除低倍率诊断段（如 C/20）
+  min_rate_frac_for_cc: 0.5
+  # 统一 SOC 网格重采样，使各循环 dV/dQ 可对齐比较
+  soc_grid_n: 100
+  soc_min: 0.10
+  soc_max: 0.95
+  baseline_cycles: 10         # 前 N 个循环构成健康基准
+  kink_min_soc: 0.50          # 析锂 kink 多在高 SOC，仅在此区间检测新凹陷
+  kink_max_soc: 0.90
+  min_prominence: 0.02        # 相对基准曲线的负向凹陷绝对 prominence 下限
+  rel_prominence: 0.30        # 凹陷/基准局部 dV/dQ 中位，须 >30%
+  persist_n: 2                # 连续 N 个循环出现才确认（抑制抖动）
+
+# ---------- 交叉验证 ----------
+validation:
+  kappa: true
+  chi2_alpha: 0.05
+  # 工况分组：低温/大倍率 vs 常温/标准（温度阈值 ℃，倍率阈值 C）
+  cold_temp_c: 10
+  high_rate_c: 1.5
+  bootstrap_n: 1000
+
+# ---------- 合成数据（无真值兜底 + 方法冒烟） ----------
+synthetic:
+  n_cells: 8
+  n_cycles: 200
+  sample_interval_s: 10
+  rest_sample_interval_s: 30  # rest 段匹配真实 Arbin 30s 采样
+  noise_std_v: 0.0001         # 电压测量噪声 V（真实 Arbin 约 0.06-0.08mV）
+  plating_onset_cycle: 80     # 合成析锂起始循环
+  relax_duration_s: 3600
+  diagnostic_every: 10        # 每 N 个循环插入一次低倍率特征化充电
+  low_rate_c: 0.05            # 特征化充电倍率 C/20
+  # M1 肩部：在 -dV/dt 上制造局部谷
+  shoulder_depth: 0.80        # 谷深相对比例（<1 保证电压不反向）
+  shoulder_time_s: 500        # 肩部出现时刻
+  shoulder_width_s: 500
+  # M4 kink：宽平台扭曲，位置固定、幅度随析锂累积
+  kink_soc: 0.72
+  kink_width: 0.08
+  kink_amp_v: 0.05
+  # M2 峰移：低倍率特征化峰的电压偏移
+  m2_shift_v: 0.045
+  m2_soc: 0.35
+
+# 强析锂工况扩充：低温/高倍率使析锂 onset 提前、沉积 fraction 增大。
+# ambient_temperature_c 为工况环境温度，charge_c_rate 为恒流充电倍率；
+# onset_cycle 为该工况下析锂起始循环，plating_fraction 为沉积电流比例。
+stress_scenarios:
+  baseline_25c_1c:
+    ambient_temperature_c: 25.0
+    charge_c_rate: 1.0
+    onset_cycle: 80
+    plating_fraction: 0.10
+  cold_0c_1c:
+    ambient_temperature_c: 0.0
+    charge_c_rate: 1.0
+    onset_cycle: 30
+    plating_fraction: 0.18
+  high_rate_25c_3c:
+    ambient_temperature_c: 25.0
+    charge_c_rate: 3.0
+    onset_cycle: 25
+    plating_fraction: 0.20
+  extreme_cold_minus10_2c:
+    ambient_temperature_c: -10.0
+    charge_c_rate: 2.0
+    onset_cycle: 15
+    plating_fraction: 0.25

@@ -39,11 +39,14 @@ class _PlatingSpec:
 
 class SyntheticBattery:
     def __init__(self, cfg: Config, cell_id: str, plating: _PlatingSpec,
-                 nominal_ah: float = 1.0):
+                 nominal_ah: float = 1.0, ambient_t: float = 25.0,
+                 charge_c: float = 1.0):
         self.cfg = cfg
         self.cell_id = cell_id
         self.plating = plating
         self.nominal_ah = nominal_ah
+        self.ambient_t = ambient_t
+        self.charge_c = charge_c
         self.dt = cfg.get("synthetic", "sample_interval_s", default=10)
         self.noise = cfg.get("synthetic", "noise_std_v", default=0.002)
         self.r0 = 0.03
@@ -68,7 +71,7 @@ class SyntheticBattery:
         for c in range(n_cycles):
             prog = self._progress(c)
             capacity *= 1 - (0.0008 + self.plating.fraction * 0.012 * prog)
-            cyc = Cycle(cycle_index=c, ambient_temperature_c=25.0,
+            cyc = Cycle(cycle_index=c, ambient_temperature_c=self.ambient_t,
                         rated_capacity_ah=capacity)
             if c % diag_every == 0:
                 cyc.add(self._low_rate_charge(c, capacity, prog))
@@ -83,10 +86,9 @@ class SyntheticBattery:
         return v + self.rng.normal(0, self.noise, len(v))
 
     def _charge(self, c: int, cap: float, prog: float) -> Segment:
-        i_charge = self.nominal_ah * 1.0
+        i_charge = self.nominal_ah * self.charge_c
         frac = self.plating.fraction * prog
         # 析锂时部分电流被沉积分流，充满活性材料需更多电荷
-        eff = i_charge * (1 - frac)
         total_ah = cap / max(1 - frac, 1e-6)
         n = int((total_ah / i_charge * 3600) / self.dt)
         t = np.arange(n) * self.dt
@@ -99,7 +101,7 @@ class SyntheticBattery:
         k_amp = self.cfg.get("synthetic", "kink_amp_v", default=0.05)
         v -= k_amp * prog * np.exp(-((soc - k_soc) / k_w) ** 2)
         return Segment("charge", t, np.full(n, i_charge),
-                       self._noise(v), np.full(n, 25.0), "charge")
+                       self._noise(v), np.full(n, self.ambient_t), "charge")
 
     def _low_rate_charge(self, c: int, cap: float, prog: float) -> Segment:
         rate_c = self.cfg.get("synthetic", "low_rate_c", default=0.05)
@@ -114,7 +116,7 @@ class SyntheticBattery:
         m2_shift = self.cfg.get("synthetic", "m2_shift_v", default=0.045)
         v += 0.5 * m2_shift * prog * (1 + np.tanh((soc - m2_soc) / 0.02))
         return Segment("charge", t, np.full(n, i_charge),
-                       self._noise(v), np.full(n, 25.0), "charge")
+                       self._noise(v), np.full(n, self.ambient_t), "charge")
 
     def _relax(self, c: int, relax_s: int, prog: float) -> Segment:
         rest_dt = self.cfg.get("synthetic", "rest_sample_interval_s",
@@ -136,7 +138,7 @@ class SyntheticBattery:
                                                * np.diff(t))])
         v = v0 - drop - self.rp
         return Segment("rest", t, np.zeros(n), self._noise(v),
-                       np.full(n, 25.0), "rest")
+                       np.full(n, self.ambient_t), "rest")
 
     def _discharge(self, c: int, cap: float) -> Segment:
         i_dis = self.nominal_ah * 1.0
@@ -145,7 +147,7 @@ class SyntheticBattery:
         soc = np.linspace(1, 0, n)
         v = _ocv_curve(soc) - i_dis * (self.r0 + self.rp)
         return Segment("discharge", t, np.full(n, -i_dis),
-                       self._noise(v), np.full(n, 25.0), "discharge")
+                       self._noise(v), np.full(n, self.ambient_t), "discharge")
 
 
 def generate_dataset(cfg: Config, n_cells: Optional[int] = None,
@@ -162,6 +164,25 @@ def generate_dataset(cfg: Config, n_cells: Optional[int] = None,
                                           default=80))
         cells.append(SyntheticBattery(cfg, f"Synth_{k:02d}", spec)
                      .build(n_cycles, relax_s))
+    return cells
+
+
+def generate_stress_dataset(cfg: Config, scenario_name: str,
+                            n_cells: int = 8, n_cycles: int = 120) -> List[CellData]:
+    """在指定强析锂工况（低温/高倍率）下生成一半析锂、一半对照的数据集。"""
+    sc = cfg.get("stress_scenarios", scenario_name).as_dict()
+    ambient_t = float(sc["ambient_temperature_c"])
+    charge_c = float(sc["charge_c_rate"])
+    onset = int(sc["onset_cycle"])
+    fraction = float(sc["plating_fraction"])
+    relax_s = cfg.get("synthetic", "relax_duration_s", default=3600)
+    cells: List[CellData] = []
+    for k in range(n_cells):
+        plated = k >= n_cells // 2
+        spec = _PlatingSpec(enabled=plated, onset=onset, fraction=fraction)
+        cells.append(SyntheticBattery(
+            cfg, f"{scenario_name}_{k:02d}", spec,
+            ambient_t=ambient_t, charge_c=charge_c).build(n_cycles, relax_s))
     return cells
 
 

@@ -106,7 +106,6 @@ def _is_low_rate(seg: Segment, cell: CellData, cfg: Config) -> bool:
 
 def run_cell(cell: CellData, cfg: Config) -> List[MethodResult]:
     shift_alarm = cfg.get("m2_dqdv", "shift_alarm_v", default=0.03)
-    split_dist = cfg.get("m2_dqdv", "split_peak_distance_v", default=0.04)
     max_gap = cfg.get("m2_dqdv", "max_match_gap_v", default=0.08)
     persist_n = cfg.get("m2_dqdv", "persist_n", default=2)
 

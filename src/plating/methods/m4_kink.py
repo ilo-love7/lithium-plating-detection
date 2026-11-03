@@ -66,8 +66,9 @@ def detect(cell: CellData, cfg: Config) -> list:
     rel_thr = cfg.get("m4_kink", "rel_prominence", default=0.30)
     persist_n = cfg.get("m4_kink", "persist_n", default=2)
 
-    # 收集各循环重采样后的 dV/dQ 曲线
-    curves = {}
+    # 先收集候选充电段及其平均电流，再确定主充电倍率
+    cc_pct = cfg.get("m4_kink", "cc_current_percentile", default=90)
+    candidates = []
     for cyc in cell.cycles:
         ch_list = cyc.by_type("charge")
         if not ch_list:
@@ -76,12 +77,23 @@ def detect(cell: CellData, cfg: Config) -> list:
         out = _cc_charge_curve(ch, cfg)
         if out is None:
             continue
+        mean_i = float(np.mean(np.abs(ch.current)))
+        candidates.append((cyc.cycle_index, out, mean_i))
+    if not candidates:
+        return []
+    main_rate = float(np.percentile([c[2] for c in candidates], cc_pct))
+    min_rate_frac = cfg.get("m4_kink", "min_rate_frac_for_cc", default=0.5)
+
+    # 仅保留主倍率 CC 段，排除低倍率诊断段（如 C/20）
+    curves = {}
+    for cid, out, mean_i in candidates:
+        if mean_i < min_rate_frac * main_rate:
+            continue
         soc, dvdq = out
         in_range = (soc >= soc_min) & (soc <= soc_max)
         if in_range.sum() < 20:
             continue
-        curves[cyc.cycle_index] = np.interp(grid, soc[in_range],
-                                            dvdq[in_range])
+        curves[cid] = np.interp(grid, soc[in_range], dvdq[in_range])
     if len(curves) < n_base + 2:
         return []
 

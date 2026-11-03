@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import os
+from importlib.resources import files as _resource_files
 from typing import Any, Dict, Optional
 
 import yaml
@@ -13,6 +14,22 @@ _DEFAULT_CONFIG = os.path.join(
     "configs",
     "config.yaml",
 )
+
+
+def _resolve_config_ref(path: Optional[str]):
+    """
+    定位配置：显式路径 > 环境变量 PLATING_CONFIG > 项目根 configs（开发模式）
+    > 包内 resources/config.yaml（pip 安装后的默认配置）。
+    返回值可能是文件路径字符串，也可能是 importlib Traversable。
+    """
+    if path:
+        return path
+    env = os.environ.get("PLATING_CONFIG")
+    if env:
+        return env
+    if os.path.exists(_DEFAULT_CONFIG):
+        return _DEFAULT_CONFIG
+    return _resource_files("plating.resources").joinpath("config.yaml")
 
 
 class Config:
@@ -53,9 +70,13 @@ def _wrap(value: Any) -> Any:
 
 def load_config(path: Optional[str] = None, overrides: Optional[Dict[str, Any]] = None) -> Config:
     """加载 YAML 配置。overrides 用于 CLI 覆盖顶层键。"""
-    path = path or _DEFAULT_CONFIG
-    with open(path, "r", encoding="utf-8") as f:
-        data = yaml.safe_load(f)
+    cfg_ref = _resolve_config_ref(path)
+    if isinstance(cfg_ref, str):
+        with open(cfg_ref, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+    else:  # importlib Traversable（打包资源）
+        with cfg_ref.open("r", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
     if overrides:
         _deep_update(data, overrides)
     return Config(data)

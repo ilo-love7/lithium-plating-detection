@@ -55,7 +55,6 @@ class GenericReader(BaseReader):
             if need not in rc:
                 raise ValueError(f"缺少必要列 {need}，实际列：{list(df.columns)}")
         n = len(df)
-        temp = df[rc["temperature"]].to_numpy() if "temperature" in rc else np.full(n, 25.0)
         cycle_idx = df[rc["cycle"]].to_numpy() if "cycle" in rc else np.zeros(n, int)
         seg_col = rc.get("segment")
         cell = CellData(
