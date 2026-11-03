@@ -1,6 +1,8 @@
 # 锂电池析锂（Lithium Plating）无损检测方法系统验证
 
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
+[![CI](https://github.com/ilo-love7/lithium-plating-detection/actions/workflows/ci.yml/badge.svg)](https://github.com/ilo-love7/lithium-plating-detection/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/badge/coverage-72%25-yellow)](https://github.com/ilo-love7/lithium-plating-detection/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![No Deep Learning](https://img.shields.io/badge/deep%20learning-none-brightgreen)]()
 
@@ -48,8 +50,18 @@
 ## 安装
 
 ```bash
+# 方式一：作为包安装（提供 console 命令 plating）
+python -m pip install .
+
+# 方式二：开发模式（含测试/ruff 等开发依赖）
+python -m pip install -e ".[dev]"
+
+# 方式三：仅安装运行依赖（历史用法）
 python -m pip install -r requirements.txt
 ```
+
+安装后可直接使用 console 入口 `plating`（等价于 `python cli.py`），例如
+`plating list-methods`、`plating synthetic --cells 16 --cycles 150`。
 
 ## 快速开始
 
@@ -79,6 +91,15 @@ python scripts/run_cross_validation.py 5
 # 阈值敏感性扫描
 python scripts/threshold_sweep.py
 
+# 合成闭环 ROC/AUC（fig5）
+python scripts/run_roc_analysis.py
+
+# 以 SOH 退化对齐的报警时机（fig6）
+python scripts/run_degradation_alignment.py
+
+# 强析锂工况（低温/高倍率，fig7）
+python scripts/run_stress_scenarios.py
+
 # 生成报告配图
 python scripts/make_figures.py
 ```
@@ -91,6 +112,9 @@ python scripts/make_figures.py
    "多方法一致性证据 + 工况物理预期对照"，不报告检测准确率。
 3. **诚实标注局限**：M2 峰移非析锂特异（正常老化同样产生峰移），其阳性对阈值
    敏感；M3 周期性可恢复 CE 波动不应判析锂；M4 正常石墨 staging 须靠基准对照排除。
+   强析锂工况验证进一步界定：M4 基于 dV/dQ 相对形态，在 3C 高倍率/极端低温下
+   欧姆-极化压降主导、真实 kink 相对 prominence 低于阈值，灵敏度为 0，属方法适用
+   边界而非缺陷；M1/M2/M3 在全部四工况下灵敏度/特异度均为 1，体现多方法互补价值。
 
 ## 数据获取
 

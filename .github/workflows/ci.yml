@@ -31,5 +31,5 @@ jobs:
       - name: Ruff lint
         run: ruff check src tests
 
-      - name: Pytest
-        run: pytest tests
+      - name: Pytest with coverage
+        run: pytest tests --cov=src/plating --cov-report=term-missing --cov-report=xml
