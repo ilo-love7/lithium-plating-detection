@@ -130,6 +130,8 @@ synthetic:
   # M2 峰移：低倍率特征化峰的电压偏移
   m2_shift_v: 0.045
   m2_soc: 0.35
+  # 噪声鲁棒性扫描：电压噪声 V
+  robustness_noise_levels: [0.0001, 0.0005, 0.002, 0.006, 0.012, 0.025, 0.05]
 
 # 强析锂工况扩充：低温/高倍率使析锂 onset 提前、沉积 fraction 增大。
 # ambient_temperature_c 为工况环境温度，charge_c_rate 为恒流充电倍率；

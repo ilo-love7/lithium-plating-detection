@@ -1,0 +1,45 @@
+name: Bug report
+description: Report a problem or unexpected behavior
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: "## Bug report"
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What went wrong, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Minimal commands or code to reproduce the issue.
+      placeholder: |
+        1. Run ...
+        2. Then ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      description: Package version or git commit hash.
+    validations:
+      required: false
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Python version, and key package versions (numpy, scipy, ...).
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      render: shell
+    validations:
+      required: false

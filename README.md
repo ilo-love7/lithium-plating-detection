@@ -2,7 +2,7 @@
 
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
 [![CI](https://github.com/ilo-love7/lithium-plating-detection/actions/workflows/ci.yml/badge.svg)](https://github.com/ilo-love7/lithium-plating-detection/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/badge/coverage-72%25-yellow)](https://github.com/ilo-love7/lithium-plating-detection/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/badge/coverage-82%25-yellow)](https://github.com/ilo-love7/lithium-plating-detection/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![No Deep Learning](https://img.shields.io/badge/deep%20learning-none-brightgreen)]()
 
@@ -18,6 +18,11 @@
 - 真实 16 电芯交叉验证：M1/M3/M4 全阴性；M2 仅在 Oxford 电芯深度老化后报峰移，
   结合 40 ℃ 高温抑制析锂的物理预期，该峰移更可能是正常老化而非析锂。
 - 证据等级：M4 高、M1/M3 中高、M2 低（峰移非析锂特异且对阈值敏感）。
+- 统计鲁棒性：真实仪器噪声（noise_std_v=1e-4 V）下四方法合成 AUC 均为 1.0，
+  bootstrap 95% 置信区间退化为 [1,1]；将噪声放大至 20 倍起才出现非完美结果，M3 全程
+  AUC=1.0、M4 仅在最高噪声略降，M1/M2 随噪声下降最明显。
+- 多方法融合：≥3 票规则在低噪声下灵敏度/特异度均为 1，较 ≥2 票更稳健——后者易因
+  M1+M2 同时假阳性而使特异度下降。
 
 ## 方法一览
 
@@ -41,6 +46,9 @@
 │   ├── relaxation.py      # 弛豫段检测
 │   ├── synthetic.py       # 含析锂真值的合成电池
 │   ├── analysis.py        # 交叉验证、一致性、工况对照
+│   ├── roc.py             # ROC/AUC 与 bootstrap 置信区间
+│   ├── ensemble.py        # 多方法融合投票
+│   ├── robustness.py      # 测量噪声鲁棒性
 │   ├── readers/           # oxford/nasa/arbin/generic 读取器
 │   └── methods/           # m1~m4
 ├── scripts/               # 诊断、测试、跑批、绘图
@@ -99,6 +107,9 @@ python scripts/run_degradation_alignment.py
 
 # 强析锂工况（低温/高倍率，fig7）
 python scripts/run_stress_scenarios.py
+
+# AUC bootstrap 置信区间 + 多方法融合投票 + 测量噪声鲁棒性（fig11/12）
+python scripts/run_bootstrap_fusion.py
 
 # 生成报告配图
 python scripts/make_figures.py

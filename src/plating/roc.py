@@ -49,6 +49,32 @@ def auc(fpr: np.ndarray, tpr: np.ndarray) -> float:
     return float(np.trapezoid(tpr[order], fpr[order]))
 
 
+def bootstrap_auc(scores: np.ndarray, labels: np.ndarray, n_boot: int = 1000,
+                  confidence: float = 0.95, seed: int = 2026):
+    """
+    对电芯有放回重采样，得到 AUC 的均值与分位数置信区间。
+
+    Returns
+    -------
+    (mean, lower, upper, boot_aucs)；重采样只含单一类别时该次跳过。
+    """
+    rng = np.random.default_rng(seed)
+    n = len(labels)
+    boot_aucs = []
+    for _ in range(n_boot):
+        idx = rng.integers(0, n, n)
+        s_b, l_b = scores[idx], labels[idx]
+        if l_b.sum() == 0 or l_b.sum() == len(l_b):
+            continue
+        fpr_b, tpr_b = roc_curve(s_b, l_b)
+        boot_aucs.append(auc(fpr_b, tpr_b))
+    boot_aucs = np.asarray(boot_aucs)
+    alpha = 1.0 - confidence
+    lower = float(np.percentile(boot_aucs, 100 * alpha / 2))
+    upper = float(np.percentile(boot_aucs, 100 * (1 - alpha / 2)))
+    return float(np.mean(boot_aucs)), lower, upper, boot_aucs
+
+
 def build_roc_table(cfg: Config, n_cells: int = 24, n_cycles: int = 140) -> Dict:
     """生成合成数据集并计算四方法 ROC/AUC。"""
     cells = generate_dataset(cfg, n_cells=n_cells, n_cycles=n_cycles)
